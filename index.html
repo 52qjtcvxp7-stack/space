@@ -12,10 +12,10 @@
         #rocketNameDisplay { font-size: 18px; color: #ffd700; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #777; padding-bottom: 5px; text-shadow: 1px 1px 2px black; }
         #backToBuildBtn { pointer-events: auto; background: #ff4757; color: white; border: none; padding: 5px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; font-weight: bold; }
         
-        #controls { position: absolute; bottom: 15px; width: 100%; display: none; justify-content: space-evenly; padding: 0 5px; box-sizing: border-box; align-items: center; z-index: 10; }
-        .btn { width: 55px; height: 55px; background: rgba(255, 255, 255, 0.8); border-radius: 50%; font-size: 11px; font-weight: bold; border: 2px solid #333; display: flex; justify-content: center; align-items: center; text-align: center; user-select: none; -webkit-user-select: none; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        #controls { position: absolute; bottom: 15px; right: 10px; width: 60%; display: none; justify-content: flex-end; gap: 10px; padding: 0 10px; box-sizing: border-box; align-items: center; z-index: 10; }
+        .btn { width: 60px; height: 60px; background: rgba(255, 255, 255, 0.8); border-radius: 50%; font-size: 11px; font-weight: bold; border: 2px solid #333; display: flex; justify-content: center; align-items: center; text-align: center; user-select: none; -webkit-user-select: none; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); pointer-events: auto; }
         .btn:active { background: rgba(200, 200, 200, 0.9); transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-        #thrustBtn { width: 75px; height: 75px; background: rgba(255, 100, 100, 0.8); color: white; font-size: 14px; text-shadow: 1px 1px 2px black; }
+        #thrustBtn { width: 80px; height: 80px; background: rgba(255, 100, 100, 0.8); color: white; font-size: 15px; text-shadow: 1px 1px 2px black; }
         #parachuteBtn { background: rgba(100, 200, 255, 0.9); }
         #sasBtn { background: rgba(200, 200, 100, 0.9); }
         #stageBtn { background: rgba(255, 150, 50, 0.9); }
@@ -35,8 +35,12 @@
         #gameOverUI h2 { color: #ff4757; margin-top: 0; }
         #retryBtn { background: #4CAF50; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 15px; font-weight: bold; }
 
-        /* ミッション成功表示用UI */
         #missionUI { position: absolute; top: 25%; width: 100%; text-align: center; color: #55ff55; font-size: 32px; font-weight: bold; text-shadow: 2px 2px 4px #000; display: none; pointer-events: none; z-index: 15; }
+
+        #navMap { position: absolute; top: 10px; right: 10px; background: rgba(0, 20, 40, 0.8); border: 2px solid #555; border-radius: 50%; display: none; z-index: 10; width: 150px; height: 150px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
+        #joystickZone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; background: rgba(255,255,255,0.2); border-radius: 50%; border: 2px solid #aaa; display: none; z-index: 20; touch-action: none; }
+        #joystickKnob { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: rgba(255,255,255,0.9); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
@@ -44,6 +48,7 @@
         <div id="rocketNameDisplay"></div>
         <div>高度: <span id="alt">0</span> m</div>
         <div>速度: <span id="vel">0</span> m/s</div>
+        <div>角度: <span id="angleUI">90.0</span>°</div>
         <div>燃料: <span id="fuel">0</span> L</div>
         <div>推力: <span id="thrustUI">0</span> kN</div>
         <button id="backToBuildBtn">◀ 組立棟に戻る</button>
@@ -51,13 +56,18 @@
     
     <div id="missionUI"></div>
 
+    <canvas id="navMap" width="200" height="200"></canvas>
+
+    <div id="joystickZone">
+        <div id="joystickKnob"></div>
+    </div>
+
     <div id="controls">
-        <div id="leftBtn" class="btn">◀ 左</div>
+        <div id="autoBtn" class="btn">AUTO<br>OFF</div>
         <div id="sasBtn" class="btn">SAS<br>OFF</div>
         <div id="stageBtn" class="btn">✂️<br>分離</div>
-        <div id="thrustBtn" class="btn">🚀 推力</div>
         <div id="parachuteBtn" class="btn">🪂<br>開傘</div>
-        <div id="rightBtn" class="btn">右 ▶</div>
+        <div id="thrustBtn" class="btn">🚀 推力</div>
     </div>
 
     <div id="buildUI">
@@ -68,10 +78,11 @@
         <button class="build-btn" id="addTank">🛢 タンク追加</button>
         <button class="build-btn" id="addEngine">🔥 エンジン追加</button>
         <button class="build-btn" id="addDecoupler">⏸ 分離リング追加</button>
+        <button class="build-btn" id="undoBuild">↩ 1つ戻る</button>
         <button class="build-btn" id="resetBuild" style="margin-top:10px;">🗑 リセット</button>
         <button class="build-btn" id="launchBtn">🚀 打ち上げ！</button>
     </div>
-    <div id="instruction">パーツを追加してください。月(上空3500m)とISS(上空1500m)を目指そう！</div>
+    <div id="instruction">パーツを追加してください。周回軌道に乗って月(高度6000m)とISS(高度2000m)を目指そう！</div>
 
     <div id="gameOverUI">
         <h2>大破しました💥</h2>
@@ -94,7 +105,32 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import * as CANNON from 'cannon-es';
 
-        // --- 1. セットアップ ---
+        // ------------ three / scene setup (unchanged mostly) --------------
+        function createEarthMapTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#1e90ff';
+            ctx.fillRect(0, 0, 1024, 512);
+            
+            ctx.fillStyle = '#228b22';
+            for (let i = 0; i < 70; i++) {
+                const x = Math.random() * 1024;
+                const y = Math.random() * 512;
+                const r = 20 + Math.random() * 70;
+                ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+            }
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 1024, 40);
+            ctx.fillRect(0, 472, 1024, 40);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB); 
         
@@ -109,7 +145,12 @@
         controls.enableDamping = true;
         controls.target.set(0, 5, 0);
 
-        const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.81, 0) });
+        const world = new CANNON.World();
+        world.gravity.set(0, 0, 0); 
+
+        const planetRadius = 6000;
+        const planetCenter = new CANNON.Vec3(0, -planetRadius, 0);
+        const planetCenterThree = new THREE.Vector3(0, -planetRadius, 0);
 
         const light = new THREE.DirectionalLight(0xffffff, 1.8);
         light.position.set(20, 50, 30);
@@ -119,58 +160,75 @@
         scene.add(fillLight);
         scene.add(new THREE.AmbientLight(0x404040));
 
-        // 背景の星
         const starsGeo = new THREE.BufferGeometry();
         const starsCount = 2000;
         const posArray = new Float32Array(starsCount * 3);
-        for(let i = 0; i < starsCount * 3; i++) posArray[i] = (Math.random() - 0.5) * 15000;
+        for(let i = 0; i < starsCount * 3; i++) posArray[i] = (Math.random() - 0.5) * 25000;
         starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const starsMat = new THREE.PointsMaterial({ size: 25, color: 0xffffff, transparent: true, opacity: 0 });
+        const starsMat = new THREE.PointsMaterial({ size: 40, color: 0xffffff, transparent: true, opacity: 0 });
         const starMesh = new THREE.Points(starsGeo, starsMat);
         scene.add(starMesh);
 
-        // 地面と発射台
         const groundMatCannon = new CANNON.Material();
-        const groundBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane(), material: groundMatCannon });
-        groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        const groundBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Sphere(planetRadius), material: groundMatCannon });
+        groundBody.position.copy(planetCenter);
         world.addBody(groundBody);
-        const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: 0x4CAF50, roughness: 0.8 }));
-        groundMesh.rotation.x = -Math.PI / 2;
+        
+        const earthMap = createEarthMapTexture();
+        const groundMesh = new THREE.Mesh(new THREE.SphereGeometry(planetRadius, 64, 64), new THREE.MeshStandardMaterial({ map: earthMap, roughness: 0.8 }));
+        groundMesh.position.copy(planetCenterThree);
+        groundMesh.rotation.x = -Math.PI / 4; 
         scene.add(groundMesh);
+
         const padMesh = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 0.5, 32), new THREE.MeshStandardMaterial({color: 0x555555, roughness: 0.9}));
         padMesh.position.y = 0.25;
         scene.add(padMesh);
 
-        // 🌕 月の追加 (高度 3500m)
         const moonRadius = 300;
-        const moonY = 3500;
+        const moonAlt = 6000;
+        const moonAngle = Math.PI / 4; 
+        const moonDist = planetRadius + moonAlt;
+        const moonPos = new CANNON.Vec3(
+            Math.sin(moonAngle) * moonDist,
+            Math.cos(moonAngle) * moonDist - planetRadius,
+            0
+        );
         const moonBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Sphere(moonRadius) });
-        moonBody.position.set(0, moonY, 0);
+        moonBody.position.copy(moonPos);
         world.addBody(moonBody);
         const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(moonRadius, 32, 32), new THREE.MeshStandardMaterial({color: 0xdddddd, roughness: 0.9, metalness: 0.1}));
-        moonMesh.position.set(0, moonY, 0);
+        moonMesh.position.copy(moonPos);
         scene.add(moonMesh);
 
-        // 🛰 ISSの追加 (高度 1500m)
-        const issY = 1500;
-        const issPos = new CANNON.Vec3(50, issY, 0); // X方向に少しずらして配置
+        const issAlt = 2000;
+        const issAngle = -Math.PI / 6; 
+        const issDist = planetRadius + issAlt;
+        const issPos = new CANNON.Vec3(
+            Math.sin(issAngle) * issDist,
+            Math.cos(issAngle) * issDist - planetRadius,
+            0
+        );
         const issBody = new CANNON.Body({ type: CANNON.Body.STATIC });
         const issQuat = new CANNON.Quaternion(); issQuat.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI/2);
-        issBody.addShape(new CANNON.Cylinder(4, 4, 30, 16), new CANNON.Vec3(0,0,0), issQuat); // 本体
-        issBody.addShape(new CANNON.Box(new CANNON.Vec3(25, 0.5, 10)), new CANNON.Vec3(0,0,0)); // パネル
+        issBody.addShape(new CANNON.Cylinder(4, 4, 30, 16), new CANNON.Vec3(0,0,0), issQuat); 
+        issBody.addShape(new CANNON.Box(new CANNON.Vec3(25, 0.5, 10)), new CANNON.Vec3(0,0,0)); 
         issBody.position.copy(issPos);
+        const issUp = new CANNON.Vec3(); issPos.vsub(planetCenter, issUp); issUp.normalize();
+        const issAxis = new CANNON.Vec3(0, 1, 0).cross(issUp);
+        const issAngleQuat = Math.acos(new CANNON.Vec3(0, 1, 0).dot(issUp));
+        issBody.quaternion.setFromAxisAngle(issAxis, issAngleQuat);
         world.addBody(issBody);
         
         const issGroup = new THREE.Group();
         issGroup.position.copy(issPos);
+        issGroup.quaternion.copy(issBody.quaternion);
         const issMain = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 30, 16), new THREE.MeshStandardMaterial({color: 0xcccccc, metalness: 0.6}));
         issMain.rotation.z = Math.PI/2;
         const issPanels = new THREE.Mesh(new THREE.BoxGeometry(50, 0.5, 20), new THREE.MeshStandardMaterial({color: 0x1133bb, metalness: 0.8, roughness: 0.2}));
         issGroup.add(issMain, issPanels);
         scene.add(issGroup);
 
-
-        // --- 2. 組み立て機能 & 超リアルパーツ生成 ---
+        // ------------ game state (unchanged fields) --------------
         let mode = 'build'; 
         let currentParts = []; 
         let isExploded = false;
@@ -184,7 +242,6 @@
             decoupler: { type: 'cylinder', radius: 1.05, length: 0.4, mass: 0.2, fuel: 0, thrust: 0 }
         };
 
-        // ✍️ タンク用: 見やすくなった縦書きテクスチャ生成
         function createVerticalTextTexture(text) {
             const canvas = document.createElement('canvas');
             canvas.width = 1024; canvas.height = 1024;
@@ -198,20 +255,15 @@
             const startY = (1024 - (chars.length * fontSize)) / 2 + (fontSize / 2);
             
             for(let i = 0; i < chars.length; i++) {
-                // 黒いフチドリ
-                ctx.lineWidth = fontSize * 0.15;
-                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = fontSize * 0.15; ctx.strokeStyle = '#000000';
                 ctx.strokeText(chars[i], 512, startY + i * fontSize);
-                // 白い文字
-                ctx.fillStyle = '#ffffff'; 
-                ctx.fillText(chars[i], 512, startY + i * fontSize);
+                ctx.fillStyle = '#ffffff'; ctx.fillText(chars[i], 512, startY + i * fontSize);
             }
             const tex = new THREE.CanvasTexture(canvas);
             tex.colorSpace = THREE.SRGBColorSpace;
             return tex;
         }
 
-        // ✨ リアルな見た目を生成する関数
         function createRealisticPartMesh(pName, isSatDeployed = false) {
             const group = new THREE.Group();
             
@@ -222,8 +274,7 @@
                 const solarMat = new THREE.MeshStandardMaterial({ color: 0x1133bb, metalness: 0.8, roughness: 0.2 });
                 const panel1 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.05, 1.2), solarMat); panel1.position.x = 2.55;
                 const panel2 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.05, 1.2), solarMat); panel2.position.x = -2.55;
-                panelsGroup.add(panel1, panel2);
-                group.add(panelsGroup);
+                panelsGroup.add(panel1, panel2); group.add(panelsGroup);
 
                 const fairingGroup = new THREE.Group();
                 const fairingMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.1, roughness: 0.8, side: THREE.DoubleSide });
@@ -233,8 +284,7 @@
                 const noseGeo = new THREE.ConeGeometry(1.05, 1.0, 16, 1, false, 0, Math.PI);
                 const noseL = new THREE.Mesh(noseGeo, fairingMat); noseL.position.y = 1.1; fairingL.add(noseL);
                 const noseR = new THREE.Mesh(noseGeo, fairingMat); noseR.position.y = 1.1; fairingR.add(noseR);
-                fairingGroup.add(fairingL, fairingR);
-                group.add(fairingGroup);
+                fairingGroup.add(fairingL, fairingR); group.add(fairingGroup);
 
                 if (isSatDeployed) { panelsGroup.visible = true; fairingGroup.visible = false; } 
                 else { panelsGroup.visible = false; fairingGroup.visible = true; }
@@ -297,26 +347,204 @@
         document.getElementById('addTank').onclick = () => { currentParts.push('tank'); renderBuild(); };
         document.getElementById('addEngine').onclick = () => { currentParts.push('engine'); renderBuild(); };
         document.getElementById('addDecoupler').onclick = () => { currentParts.push('decoupler'); renderBuild(); };
+        document.getElementById('undoBuild').onclick = () => { if (currentParts.length > 0) { currentParts.pop(); renderBuild(); } };
         document.getElementById('resetBuild').onclick = () => { currentParts = []; renderBuild(); };
 
-        // --- 3. 打ち上げ・物理 ---
+        // ------------ physics / rocket state --------------
         let rocketBody, rocketMesh, flames = [];
         let rocketStats = { fuel: 0, maxThrust: 0, totalMass: 0, lowestY: 0 };
-        const state = { thrust: false, left: false, right: false };
+        const state = { thrust: false, joyX: 0, joyY: 0 };
         let parachuteDeployed = false;
         let parachuteMesh;
         let sasEnabled = false;
+        let autoMode = 'OFF'; // オートパイロットの状態 ('OFF', 'MOON', 'ISS')
         
         let activeParts = []; 
         let debrisList = []; 
 
+        // ------------ AUDIO: Web Audio API (プログラム生成) --------------
+        let audioCtx = null;
+        let engineOsc = null, engineGain = null, engineFilter = null, engineLFO = null;
+        let engineInitialized = false;
+
+        function initAudioIfNeeded() {
+            if (engineInitialized) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.warn('AudioContext not supported', e);
+                return;
+            }
+
+            // エンジンの持続ノイズ（saw + filter + LFO でゴォーを作る）
+            engineOsc = audioCtx.createOscillator();
+            engineOsc.type = 'sawtooth';
+            engineFilter = audioCtx.createBiquadFilter();
+            engineFilter.type = 'lowpass';
+            engineFilter.frequency.value = 800;
+
+            engineGain = audioCtx.createGain();
+            engineGain.gain.value = 0.0;
+
+            // LFO でフィルタを揺らす（炎の揺らぎに相当）
+            engineLFO = audioCtx.createOscillator();
+            engineLFO.type = 'sine';
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 200;
+            engineLFO.connect(lfoGain);
+            lfoGain.connect(engineFilter.frequency);
+
+            engineOsc.connect(engineFilter);
+            engineFilter.connect(engineGain);
+            engineGain.connect(audioCtx.destination);
+
+            engineOsc.start();
+            engineLFO.start();
+
+            engineInitialized = true;
+        }
+
+        // 爆発音（短いノイズバーストを生成）
+        function playExplosionSound() {
+            if (!audioCtx) return;
+            const len = audioCtx.sampleRate * 0.6;
+            const buffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            // 強めの低周ノイズにエンベロープをかける
+            for (let i = 0; i < len; i++) {
+                const t = i / len;
+                const env = Math.pow(1 - t, 3);
+                data[i] = (Math.random() * 2 - 1) * env * (0.6 + Math.random() * 0.4);
+            }
+            const src = audioCtx.createBufferSource();
+            src.buffer = buffer;
+            const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 800;
+            const gain = audioCtx.createGain(); gain.gain.value = 0.8;
+            src.connect(lp); lp.connect(gain); gain.connect(audioCtx.destination);
+            src.start();
+        }
+
+        // 分離音（短い高域のパルス）
+        function playDecoupleSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.value = 1200 + Math.random() * 800;
+            g.gain.value = 0.0001;
+            osc.connect(g); g.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            g.gain.setValueAtTime(0.0001, now);
+            g.gain.exponentialRampToValueAtTime(0.6, now + 0.005);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+
+        // エンジンゲインを更新（0..1）
+        function setEngineLevel(level) {
+            if (!engineInitialized) return;
+            const t = audioCtx.currentTime;
+            engineGain.gain.cancelScheduledValues(t);
+            engineGain.gain.setTargetAtTime(level * 0.8, t, 0.05);
+            // フィルタも少し上げて重低音の幅を変える
+            engineFilter.frequency.setTargetAtTime(400 + level * 3000, t, 0.05);
+            engineLFO.frequency.setTargetAtTime(1 + level * 4, t, 0.2);
+        }
+
+        // ------------ PARTICLES: 煙・火花エフェクト --------------
+        const particleGroup = new THREE.Group();
+        scene.add(particleGroup);
+        const smokePool = [];
+        const sparkPool = [];
+        const MAX_SMOKE = 120;
+        const MAX_SPARKS = 80;
+
+        // マテリアル（シンプル、ライト負荷）
+        const smokeMat = new THREE.MeshBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.5, depthWrite: false });
+        const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 1.0, depthWrite: false });
+
+        for (let i = 0; i < MAX_SMOKE; i++) {
+            const m = new THREE.Mesh(new THREE.SphereGeometry(0.4, 6, 6), smokeMat.clone());
+            m.visible = false; particleGroup.add(m); smokePool.push({ mesh: m, vel: new THREE.Vector3(), life: 0 });
+        }
+        for (let i = 0; i < MAX_SPARKS; i++) {
+            const m = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 6), sparkMat.clone());
+            m.visible = false; particleGroup.add(m); sparkPool.push({ mesh: m, vel: new THREE.Vector3(), life: 0 });
+        }
+
+        function spawnEngineParticles(worldPos, worldDir, intensity) {
+            // smoke
+            for (let i = 0; i < Math.min(3, Math.ceil(intensity * 3)); i++) {
+                const p = smokePool.find(x => x.life <= 0);
+                if (!p) break;
+                p.mesh.visible = true;
+                p.mesh.position.copy(worldPos);
+                // slight random offset
+                p.mesh.position.x += (Math.random() - 0.5) * 0.2;
+                p.mesh.position.z += (Math.random() - 0.5) * 0.2;
+                const speed = 1 + Math.random() * 2;
+                p.vel.copy(worldDir).multiplyScalar(-speed);
+                p.vel.x += (Math.random() - 0.5) * 0.8;
+                p.vel.y += 0.5 + Math.random() * 1.0;
+                p.life = 1.0 + Math.random() * 1.2;
+                p.mesh.scale.setScalar(0.6 + Math.random() * 0.8);
+                p.mesh.material.opacity = 0.6;
+            }
+            // sparks
+            for (let i = 0; i < Math.min(4, Math.ceil(intensity * 6)); i++) {
+                const p = sparkPool.find(x => x.life <= 0);
+                if (!p) break;
+                p.mesh.visible = true;
+                p.mesh.position.copy(worldPos);
+                p.mesh.position.x += (Math.random() - 0.5) * 0.1;
+                p.mesh.position.z += (Math.random() - 0.5) * 0.1;
+                const speed = 6 + Math.random() * 6;
+                p.vel.set((Math.random()-0.5)*2, -Math.random()*2, (Math.random()-0.5)*2);
+                p.life = 0.25 + Math.random()*0.35;
+                p.mesh.scale.setScalar(0.06 + Math.random()*0.08);
+                p.mesh.material.opacity = 1.0;
+            }
+        }
+
+        function updateParticles(dt) {
+            smokePool.forEach(p => {
+                if (p.life > 0) {
+                    p.life -= dt;
+                    p.mesh.position.addScaledVector(p.vel, dt);
+                    p.mesh.material.opacity = Math.max(0, p.life / 1.6);
+                    const s = 1 + (1 - p.life) * 1.4;
+                    p.mesh.scale.setScalar(s);
+                    if (p.life <= 0) { p.mesh.visible = false; }
+                }
+            });
+            sparkPool.forEach(p => {
+                if (p.life > 0) {
+                    p.life -= dt;
+                    p.mesh.position.addScaledVector(p.vel, dt);
+                    p.mesh.material.opacity = Math.max(0, p.life / 0.6);
+                    p.mesh.scale.setScalar(Math.max(0.01, p.life * 0.6));
+                    if (p.life <= 0) { p.mesh.visible = false; }
+                }
+            });
+        }
+
+        // ------------ build / launch / physics body creation --------------
         document.getElementById('launchBtn').onclick = () => {
             if(currentParts.length === 0) return alert("パーツを追加してください！");
             
+            // audio 初期化（ユーザー操作があるので再生可能に）
+            initAudioIfNeeded();
+
             document.getElementById('rocketNameDisplay').innerText = document.getElementById('rocketNameInput').value || "無名ロケット";
 
             mode = 'flight';
             isExploded = false; parachuteDeployed = false; sasEnabled = false; satelliteDeployed = false;
+            
+            // オートパイロット初期化
+            autoMode = 'OFF';
+            document.getElementById('autoBtn').innerHTML = "AUTO<br>OFF";
+            document.getElementById('autoBtn').style.background = "rgba(255, 255, 255, 0.8)";
             
             document.getElementById('parachuteBtn').style.opacity = '1.0';
             document.getElementById('sasBtn').innerHTML = "SAS<br>OFF";
@@ -328,6 +556,8 @@
             document.getElementById('ui').style.display = 'block';
             document.getElementById('gameOverUI').style.display = 'none';
             document.getElementById('missionUI').style.display = 'none';
+            document.getElementById('navMap').style.display = 'block'; 
+            document.getElementById('joystickZone').style.display = 'block'; 
             
             buildGroup.visible = false; 
             
@@ -341,13 +571,16 @@
                 currentY -= pDef.length;
             }
 
-            buildPhysicsBody(new CANNON.Vec3(0, Math.abs(currentY) + 0.5, 0), new CANNON.Vec3(), new CANNON.Quaternion(), new CANNON.Vec3());
+            // 発射台に合わせるために alignToPad=true
+            buildPhysicsBody(new CANNON.Vec3(0, 0.25, 0), new CANNON.Vec3(), new CANNON.Quaternion(), new CANNON.Vec3(), true);
             
             camera.position.set(10, 10, 25);
+            camera.up.set(0, 1, 0); 
             controls.target.copy(rocketMesh.position);
         };
 
-        function buildPhysicsBody(pos, vel, quat, angVel) {
+        // buildPhysicsBody に alignToPad オプションを追加（発射台への正しい配置を担保）
+        function buildPhysicsBody(pos, vel, quat, angVel, alignToPad=false) {
             if(rocketBody) world.removeBody(rocketBody);
             if(rocketMesh) scene.remove(rocketMesh);
 
@@ -357,7 +590,7 @@
             
             let cgY = 0;
             activeParts.forEach(p => { rocketStats.totalMass += p.mass; cgY += p.originalY * p.mass; });
-            cgY /= rocketStats.totalMass; 
+            cgY /= rocketStats.totalMass || 1; 
 
             rocketBody = new CANNON.Body({ mass: rocketStats.totalMass, type: CANNON.Body.DYNAMIC, angularDamping: sasEnabled ? 0.99 : 0.4 }); 
             
@@ -398,12 +631,18 @@
             parachuteMesh.visible = parachuteDeployed;
             rocketMesh.add(parachuteMesh);
             
-            rocketBody.position.copy(pos); rocketBody.velocity.copy(vel); rocketBody.quaternion.copy(quat); rocketBody.angularVelocity.copy(angVel);
+            // 発射台に合わせるロジック:
+            if (alignToPad) {
+                // pos.y を pad の上面（例: 0.25）として、ローカル最低点が pad の上に来るようにオフセット
+                rocketBody.position.set(pos.x, pos.y - lowestYLocal + 0.0, pos.z);
+            } else {
+                rocketBody.position.copy(pos);
+            }
+            rocketBody.velocity.copy(vel); rocketBody.quaternion.copy(quat); rocketBody.angularVelocity.copy(angVel);
 
             world.addBody(rocketBody); scene.add(rocketMesh);
         }
 
-        // フェアリング展開処理
         function deployFairingDebris(partsList, oldPos, oldVel, oldQuat, oldAngVel) {
             let currentCgY = 0, currentTotalMass = 0;
             partsList.forEach(p => { currentTotalMass += p.mass; currentCgY += p.originalY * p.mass; });
@@ -442,7 +681,6 @@
             });
         }
 
-        // 分離処理
         document.getElementById('stageBtn').onclick = () => {
             if (mode !== 'flight' || isExploded) return;
             let decoupleIdx = -1;
@@ -453,6 +691,9 @@
                     satelliteDeployed = true;
                     deployFairingDebris(activeParts, rocketBody.position, rocketBody.velocity, rocketBody.quaternion, rocketBody.angularVelocity);
                     buildPhysicsBody(rocketBody.position, rocketBody.velocity, rocketBody.quaternion, rocketBody.angularVelocity);
+                    // 音を鳴らす
+                    initAudioIfNeeded();
+                    playDecoupleSound();
                 }
                 return; 
             }
@@ -484,7 +725,11 @@
             buildPhysicsBody(newPos, oldVel, oldQuat, oldAngVel);
             createDebris(droppedParts, oldCgY, oldPos, oldVel, oldQuat, oldAngVel);
 
-            if (deployNow) deployFairingDebris(keptParts, newPos, oldVel, oldQuat, oldAngVel);
+            if (deployNow) {
+                deployFairingDebris(keptParts, newPos, oldVel, oldQuat, oldAngVel);
+                initAudioIfNeeded();
+                playDecoupleSound();
+            }
         };
 
         function createDebris(droppedParts, oldCgY, oldPos, oldVel, oldQuat, oldAngVel) {
@@ -517,7 +762,6 @@
             world.addBody(dBody); scene.add(dMeshGroup); debrisList.push({ body: dBody, mesh: dMeshGroup });
         }
 
-        // パラシュート & SAS
         document.getElementById('parachuteBtn').onclick = () => {
             if (mode === 'flight' && !isExploded && !parachuteDeployed) { parachuteDeployed = true; if(parachuteMesh) parachuteMesh.visible = true; document.getElementById('parachuteBtn').style.opacity = '0.5'; }
         };
@@ -526,10 +770,30 @@
             sasEnabled = !sasEnabled;
             document.getElementById('sasBtn').innerHTML = sasEnabled ? "SAS<br>ON" : "SAS<br>OFF";
             document.getElementById('sasBtn').style.background = sasEnabled ? "rgba(100, 255, 100, 0.9)" : "rgba(200, 200, 100, 0.9)";
-            if (rocketBody) rocketBody.angularDamping = sasEnabled ? 0.99 : 0.4;
+            if (rocketBody) rocketBody.angularDamping = (sasEnabled || autoMode !== 'OFF') ? 0.99 : 0.4;
         };
 
-        // --- 4. 爆発・リトライ ---
+        // 追加：オートパイロットボタンの処理（強化）
+        document.getElementById('autoBtn').onclick = () => {
+            if (mode !== 'flight' || isExploded) return;
+            if (autoMode === 'OFF') autoMode = 'MOON';
+            else if (autoMode === 'MOON') autoMode = 'ISS';
+            else autoMode = 'OFF';
+
+            const btn = document.getElementById('autoBtn');
+            if (autoMode === 'OFF') {
+                btn.innerHTML = "AUTO<br>OFF";
+                btn.style.background = "rgba(255, 255, 255, 0.8)";
+            } else if (autoMode === 'MOON') {
+                btn.innerHTML = "AUTO<br>🌕月";
+                btn.style.background = "rgba(200, 200, 255, 0.9)";
+            } else {
+                btn.innerHTML = "AUTO<br>🛰ISS";
+                btn.style.background = "rgba(255, 200, 150, 0.9)";
+            }
+            if (rocketBody) rocketBody.angularDamping = (sasEnabled || autoMode !== 'OFF') ? 0.99 : 0.4;
+        };
+
         let explosionParticles = [];
         function createExplosion(pos) {
             for(let i=0; i<50; i++){
@@ -537,29 +801,135 @@
                 mesh.position.copy(pos); scene.add(mesh);
                 explosionParticles.push({ mesh: mesh, velocity: new THREE.Vector3((Math.random()-0.5)*30, Math.random()*20, (Math.random()-0.5)*30), life: 1.0 + Math.random() * 0.5 });
             }
+            // 音
+            initAudioIfNeeded();
+            playExplosionSound();
         }
 
         function returnToVAB() {
-            mode = 'build'; isExploded = false; satelliteDeployed = false;
-            document.getElementById('buildUI').style.display = 'flex'; document.getElementById('instruction').style.display = 'block'; document.getElementById('controls').style.display = 'none'; document.getElementById('ui').style.display = 'none'; document.getElementById('gameOverUI').style.display = 'none'; document.getElementById('missionUI').style.display = 'none';
+            mode = 'build'; isExploded = false; satelliteDeployed = false; autoMode = 'OFF';
+            document.getElementById('buildUI').style.display = 'flex'; document.getElementById('instruction').style.display = 'block'; document.getElementById('controls').style.display = 'none'; document.getElementById('ui').style.display = 'none'; document.getElementById('gameOverUI').style.display = 'none'; document.getElementById('missionUI').style.display = 'none'; document.getElementById('navMap').style.display = 'none';
+            document.getElementById('joystickZone').style.display = 'none'; 
+            
             if(rocketBody) world.removeBody(rocketBody); if(rocketMesh) scene.remove(rocketMesh);
             explosionParticles.forEach(p => scene.remove(p.mesh)); explosionParticles = [];
             debrisList.forEach(d => { world.removeBody(d.body); scene.remove(d.mesh); }); debrisList = [];
-            buildGroup.visible = true; camera.position.set(0, 10, 25); controls.target.set(0, 5, 0); scene.background.setHSL(0.55, 0.8, 0.5); starsMat.opacity = 0; 
+            buildGroup.visible = true; camera.position.set(0, 10, 25); camera.up.set(0, 1, 0); controls.target.set(0, 5, 0); scene.background.setHSL(0.55, 0.8, 0.5); starsMat.opacity = 0; 
         }
 
         document.getElementById('retryBtn').onclick = returnToVAB; document.getElementById('backToBuildBtn').onclick = returnToVAB;
 
-        // --- 5. 入力 ---
         const setupButton = (id, key) => {
             const btn = document.getElementById(id); if(!btn) return;
             btn.addEventListener('pointerdown', (e) => { e.preventDefault(); state[key] = true; }); btn.addEventListener('pointerup', (e) => { e.preventDefault(); state[key] = false; }); btn.addEventListener('pointerleave', (e) => { e.preventDefault(); state[key] = false; });
         };
-        setupButton('thrustBtn', 'thrust'); setupButton('leftBtn', 'left'); setupButton('rightBtn', 'right');
+        setupButton('thrustBtn', 'thrust');
 
-        const uiAlt = document.getElementById('alt'); const uiVel = document.getElementById('vel'); const uiFuel = document.getElementById('fuel'); const uiThrust = document.getElementById('thrustUI'); const missionUI = document.getElementById('missionUI');
+        // スラストボタンは初回タップで AudioContext を起動するように
+        document.getElementById('thrustBtn').addEventListener('pointerdown', (e) => { initAudioIfNeeded(); });
 
-        // --- 6. メインループ ---
+        const joyZone = document.getElementById('joystickZone');
+        const joyKnob = document.getElementById('joystickKnob');
+        let joyActive = false;
+        let joyCenterX = 0;
+        let joyCenterY = 0;
+
+        joyZone.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            joyActive = true;
+            const rect = joyZone.getBoundingClientRect();
+            joyCenterX = rect.left + rect.width / 2;
+            joyCenterY = rect.top + rect.height / 2;
+            updateJoystick(e);
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!joyActive) return;
+            e.preventDefault();
+            updateJoystick(e);
+        });
+
+        const resetJoystick = () => {
+            joyActive = false;
+            state.joyX = 0;
+            state.joyY = 0;
+            joyKnob.style.transform = `translate(-50%, -50%)`;
+        };
+        window.addEventListener('pointerup', resetJoystick);
+        window.addEventListener('pointercancel', resetJoystick);
+
+        function updateJoystick(e) {
+            let dx = e.clientX - joyCenterX;
+            let dy = e.clientY - joyCenterY;
+            const maxDist = 40; 
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > maxDist) {
+                dx = (dx / dist) * maxDist;
+                dy = (dy / dist) * maxDist;
+            }
+            joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            state.joyX = dx / maxDist; 
+            state.joyY = dy / maxDist; 
+        }
+
+        const uiAlt = document.getElementById('alt'); const uiVel = document.getElementById('vel'); const uiFuel = document.getElementById('fuel'); const uiThrust = document.getElementById('thrustUI'); const missionUI = document.getElementById('missionUI'); const uiAngle = document.getElementById('angleUI');
+
+        const applySphericalGravity = (body) => {
+            const dir = new CANNON.Vec3();
+            planetCenter.vsub(body.position, dir);
+            const dist = dir.length();
+            if (dist < 0.1) return;
+            dir.normalize();
+            const g = 9.81 * Math.pow(planetRadius / dist, 2);
+            body.applyForce(dir.scale(body.mass * g), body.position);
+        };
+
+        function updateNavMap() {
+            const canvas = document.getElementById('navMap');
+            if (canvas.style.display === 'none') return;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, 200, 200);
+            
+            const cx = 100; 
+            const cy = 100; 
+            const scale = 100 / 14000; 
+
+            ctx.fillStyle = '#1e90ff';
+            ctx.beginPath();
+            ctx.arc(cx, cy, planetRadius * scale, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#dddddd';
+            const mx = cx + moonBody.position.x * scale;
+            const my = cy - (moonBody.position.y - planetCenter.y) * scale;
+            ctx.beginPath();
+            ctx.arc(mx, my, moonRadius * scale * 2, 0, Math.PI * 2); 
+            ctx.fill();
+
+            ctx.fillStyle = '#ffaa00';
+            const ix = cx + issBody.position.x * scale;
+            const iy = cy - (issBody.position.y - planetCenter.y) * scale;
+            ctx.fillRect(ix - 3, iy - 3, 6, 6);
+
+            ctx.fillStyle = '#ff0000';
+            if (rocketBody) {
+                const rx = cx + rocketBody.position.x * scale;
+                const ry = cy - (rocketBody.position.y - planetCenter.y) * scale;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                const worldUp = rocketBody.quaternion.vmult(new CANNON.Vec3(0, 1, 0));
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(rx + worldUp.x * 12, ry - worldUp.y * 12);
+                ctx.stroke();
+            }
+        }
+
         const timeStep = 1 / 60; let lastCallTime = performance.now();
 
         function animate() {
@@ -577,35 +947,105 @@
 
             if (mode === 'build') { renderer.render(scene, camera); return; }
 
-            if (!isExploded) {
-                if (sasEnabled) rocketBody.angularVelocity.scale(0.4, rocketBody.angularVelocity); 
+            if (!isExploded && rocketBody) {
+                applySphericalGravity(rocketBody);
+                debrisList.forEach(d => applySphericalGravity(d.body));
+
+                // SAS / auto mode の角速度抑制（既存）
+                if (sasEnabled || autoMode !== 'OFF') rocketBody.angularVelocity.scale(0.4, rocketBody.angularVelocity); 
+
+                // 追加：オートパイロット機能（ターゲットへの指向・強化）
+                if (autoMode !== 'OFF') {
+                    const targetPos = autoMode === 'MOON' ? moonBody.position : issBody.position;
+                    const targetDir = new CANNON.Vec3();
+                    targetPos.vsub(rocketBody.position, targetDir);
+                    targetDir.normalize();
+
+                    const currentDir = rocketBody.quaternion.vmult(new CANNON.Vec3(0, 1, 0));
+                    const crossNode = currentDir.cross(targetDir);
+                    const dotProd = currentDir.dot(targetDir);
+                    const angleDiff = Math.acos(Math.max(-1, Math.min(1, dotProd)));
+
+                    if (angleDiff > 0.01 && crossNode.lengthSquared() > 0.0001) {
+                        crossNode.normalize();
+                        // 強化：角度差と速度に応じてトルクを与える（より積極的に向く）
+                        const speed = rocketBody.velocity.length();
+                        const alignTorque = rocketStats.totalMass * (120 + Math.min(200, speed * 2)) * angleDiff;
+                        rocketBody.applyTorque(crossNode.scale(alignTorque));
+                    }
+                }
+
+                // 追加：SAS が ON のとき、高速なら「進行方向（プログレード）」を維持するようにトルクを与える
+                if (sasEnabled) {
+                    const speed = rocketBody.velocity.length();
+                    if (speed > 2) { // ある程度速度がある場合のみ prograde を維持
+                        const prograde = new CANNON.Vec3();
+                        prograde.copy(rocketBody.velocity);
+                        if (prograde.length() > 0.001) {
+                            prograde.normalize();
+                            const currentDir = rocketBody.quaternion.vmult(new CANNON.Vec3(0, 1, 0)); // 機首ベクトル
+                            const crossNode = currentDir.cross(prograde);
+                            const dotProd = currentDir.dot(prograde);
+                            const angleDiff = Math.acos(Math.max(-1, Math.min(1, dotProd)));
+                            if (angleDiff > 0.005 && crossNode.lengthSquared() > 0.00001) {
+                                crossNode.normalize();
+                                const sasAlignTorque = rocketStats.totalMass * 80 * angleDiff * Math.min(1.0, speed / 60);
+                                rocketBody.applyTorque(crossNode.scale(sasAlignTorque));
+                            }
+                        }
+                    }
+                }
 
                 let currentThrust = 0;
                 if (state.thrust && rocketStats.fuel > 0) {
                     const fuelConsumptionRate = rocketStats.maxThrust * 0.01; 
                     rocketStats.fuel -= dt * fuelConsumptionRate; if (rocketStats.fuel < 0) rocketStats.fuel = 0;
+                    // thrust レベルを 0..1 に正規化（視覚・音・パーティクル制御用）
+                    const thrustLevel = Math.min(1, rocketStats.fuel / (fuelConsumptionRate * 10) + 0.5);
                     currentThrust = rocketStats.maxThrust * (0.5 + 0.5 * (rocketStats.fuel / Math.max(0.1, rocketStats.fuel + dt*fuelConsumptionRate)));
                     rocketBody.applyLocalForce(new CANNON.Vec3(0, currentThrust, 0), new CANNON.Vec3(0, rocketStats.lowestY, 0));
                     flames.forEach(f => { f.visible = true; f.scale.setScalar(0.7 + Math.random() * 0.6); });
-                } else { flames.forEach(f => f.visible = false); }
 
-                // 🎮 コントロールの改善（RCSのように安定させる）
-                const torqueAmt = rocketStats.totalMass * 10; // トルクを強めに
-                const maxSpin = 1.0; // 最大回転速度
-                if (state.left) {
-                    rocketBody.applyLocalTorque(new CANNON.Vec3(0, 0, torqueAmt));
-                    if(rocketBody.angularVelocity.z > maxSpin) rocketBody.angularVelocity.z = maxSpin;
-                } else if (state.right) {
-                    rocketBody.applyLocalTorque(new CANNON.Vec3(0, 0, -torqueAmt));
-                    if(rocketBody.angularVelocity.z < -maxSpin) rocketBody.angularVelocity.z = -maxSpin;
-                } else if (!sasEnabled) {
-                    // ボタンを離すと少しブレーキがかかる(操作性アップ)
-                    rocketBody.angularVelocity.z *= 0.95;
+                    // 音量制御（エンジン）
+                    setEngineLevel(thrustLevel);
+
+                    // パーティクル吐出（各フレーム、噴射口のワールド位置を取る）
+                    for (let i = 0; i < flames.length; i++) {
+                        const f = flames[i];
+                        if (!f.visible) continue;
+                        const worldPos = new THREE.Vector3(); f.getWorldPosition(worldPos);
+                        // worldDir = ノズルの「下」方向（ローカル -Y が噴射方向のはず）
+                        const nozzleDir = new THREE.Vector3(0, -1, 0).applyQuaternion(f.getWorldQuaternion(new THREE.Quaternion()));
+                        spawnEngineParticles(worldPos, nozzleDir, 0.6 + Math.random() * 0.8);
+                    }
+                } else { 
+                    flames.forEach(f => f.visible = false);
+                    // エンジン音をフェードアウト
+                    setEngineLevel(0);
                 }
 
-                const altitude = rocketBody.position.y; const speedVec = rocketBody.velocity; const speed = speedVec.length();
-                const airDensity = Math.max(0, 1 - (altitude / 5000)); 
+                // 変更：バーチャルパッドの感度（トルク）を15から60へ大幅に上昇
+                const torqueAmt = rocketStats.totalMass * 60; 
+                if (state.joyX !== 0 || state.joyY !== 0) {
+                    const localTorque = new CANNON.Vec3(state.joyY * torqueAmt, 0, -state.joyX * torqueAmt);
+                    rocketBody.applyTorque(rocketBody.quaternion.vmult(localTorque));
+                }
+
+                const distToCenter = rocketBody.position.distanceTo(planetCenter);
+                const altitude = distToCenter - planetRadius;
+                
+                const gravityUp = new CANNON.Vec3();
+                rocketBody.position.vsub(planetCenter, gravityUp);
+                gravityUp.normalize();
+                camera.up.copy(new THREE.Vector3(gravityUp.x, gravityUp.y, gravityUp.z));
+
+                // 追加：ピッチ角度の計算と表示
                 const worldUp = rocketBody.quaternion.vmult(new CANNON.Vec3(0, 1, 0));
+                const pitchAngle = Math.asin(Math.max(-1, Math.min(1, worldUp.dot(gravityUp)))) * (180 / Math.PI);
+                uiAngle.innerText = pitchAngle.toFixed(1);
+
+                const speedVec = rocketBody.velocity; const speed = speedVec.length();
+                const airDensity = Math.max(0, 1 - (altitude / 5000)); 
                 
                 let dot = 1; if (speed > 0.1) dot = worldUp.dot(new CANNON.Vec3(speedVec.x/speed, speedVec.y/speed, speedVec.z/speed));
                 const crossSection = rocketStats.totalMass * (1.0 - Math.abs(dot) * 0.6); 
@@ -617,7 +1057,7 @@
                         const vNormX = speedVec.x / speed, vNormY = speedVec.y / speed, vNormZ = speedVec.z / speed;
                         rocketBody.applyTorque(new CANNON.Vec3(-(worldUp.y * vNormZ - worldUp.z * vNormY) * speed * 2, -(worldUp.z * vNormX - worldUp.x * vNormZ) * speed * 2, -(worldUp.x * vNormY - worldUp.y * vNormX) * speed * 2));
                     }
-                } else if (speed > 5 && airDensity > 0.1 && !sasEnabled) {
+                } else if (speed > 5 && airDensity > 0.1 && !sasEnabled && autoMode === 'OFF') {
                     const vNormX = speedVec.x / speed, vNormY = speedVec.y / speed, vNormZ = speedVec.z / speed;
                     rocketBody.applyTorque(new CANNON.Vec3(-(worldUp.y * vNormZ - worldUp.z * vNormY) * speed * airDensity * rocketStats.totalMass * 0.02, -(worldUp.z * vNormX - worldUp.x * vNormZ) * speed * airDensity * rocketStats.totalMass * 0.02, -(worldUp.x * vNormY - worldUp.y * vNormX) * speed * airDensity * rocketStats.totalMass * 0.02));
                 }
@@ -629,17 +1069,16 @@
                 rocketMesh.position.copy(rocketBody.position); rocketMesh.quaternion.copy(rocketBody.quaternion);
                 controls.target.lerp(rocketMesh.position, 0.15);
 
-                // 背景色と星の調整
+                updateNavMap();
+
                 scene.background.setHSL(0.55, 0.8, 0.5 * Math.max(0, 1 - (altitude / 8000)));
                 starsMat.opacity = Math.max(0, Math.min(1, (altitude - 1000) / 3000));
 
                 uiAlt.innerText = Math.max(0, altitude).toFixed(0); uiVel.innerText = speed.toFixed(1); uiFuel.innerText = Math.max(0, rocketStats.fuel).toFixed(0); uiThrust.innerText = (currentThrust / 10).toFixed(0);
 
-                // --- 衝突・ミッション判定 ---
                 const distMoon = rocketBody.position.distanceTo(moonBody.position);
                 const distISS = rocketBody.position.distanceTo(issBody.position);
                 
-                // ミッション成功UI表示
                 let missionText = "";
                 if (distMoon < moonRadius + Math.abs(rocketStats.lowestY) + 2.0 && speed < 5) {
                     missionText = "🌕 月面着陸成功！<br><span style='font-size:16px; color:white;'>パラシュートを開いて地球に帰還しよう！</span>";
@@ -649,17 +1088,19 @@
                 if (missionText !== "") { missionUI.innerHTML = missionText; missionUI.style.display = 'block'; } 
                 else { missionUI.style.display = 'none'; }
 
-                // 爆発判定（地面、月、ISSへの激突）
-                const hitGround = rocketBody.position.y < Math.abs(rocketStats.lowestY) + 0.6;
+                const hitGround = altitude < Math.abs(rocketStats.lowestY) + 0.6;
                 const hitMoon = distMoon < moonRadius + Math.abs(rocketStats.lowestY) + 0.5;
-                const hitISS = distISS < 20; // 大まかなISSとの接触距離
+                const hitISS = distISS < 20; 
                 const isHardImpact = speed > (parachuteDeployed ? 15 : 8);
 
                 if ((hitGround || hitMoon || hitISS) && isHardImpact) {
                     isExploded = true; createExplosion(rocketMesh.position); scene.remove(rocketMesh);
-                    document.getElementById('gameOverUI').style.display = 'block'; document.getElementById('controls').style.display = 'none'; missionUI.style.display = 'none';
+                    document.getElementById('gameOverUI').style.display = 'block'; document.getElementById('controls').style.display = 'none'; missionUI.style.display = 'none'; document.getElementById('joystickZone').style.display = 'none';
                 }
             }
+
+            // パーティクル更新
+            updateParticles((performance.now()/1000 - time) || 0.016);
             renderer.render(scene, camera);
         }
 
