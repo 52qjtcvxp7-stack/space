@@ -50,6 +50,44 @@
         #timeWarpUI { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: none; z-index: 20; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 8px; gap: 5px; }
         .tw-btn { background: #333; color: white; border: 1px solid #555; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .tw-btn.active { background: #ff4757; border-color: #ff4757; box-shadow: 0 0 5px #ff4757; }
+        /* スマホ向けのUI改善設定 */
+        button {
+            /* 指で押しやすいようにボタンを大きくする（Apple推奨の44px以上） */
+            min-height: 48px;
+            min-width: 48px;
+            padding: 10px 15px;
+            font-size: 16px;
+            margin: 4px;
+            border-radius: 8px;
+            touch-action: manipulation; /* ズームやダブルタップの誤爆を防ぐ */
+        }
+        
+        #ui, #controls, #timeWarpUI {
+            /* UIパネルの背景を少し濃くして見やすくし、文字を大きく */
+            background: rgba(0, 0, 0, 0.75);
+            font-size: 16px;
+            padding: 15px;
+            backdrop-filter: blur(4px); /* 背景をぼかす */
+        }
+
+        #sasPanel button {
+            /* SASの各ボタンを押しやすく均等に配置 */
+            flex: 1;
+            margin: 2px;
+            font-size: 14px;
+            min-height: 44px;
+        }
+
+        /* ジョイスティックをスマホの両手持ちに適した位置へ */
+        #joystickZone {
+            bottom: 30px !important;
+            left: 30px !important;
+            width: 140px !important;
+            height: 140px !important;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
     </style>
 </head>
 <body>
@@ -1207,34 +1245,43 @@
                 if (throttle > 0 && rocketStats.fuel > 0) {
                     const fuelBurn = dt * rocketStats.maxThrust * 0.012 * throttle; 
                     rocketStats.fuel -= fuelBurn;
+                    // --- ここから書き換え ---
                     const minMass = rocketStats.totalMass * 0.2; 
                     if (rocketBody.mass > minMass) { 
                         rocketBody.mass -= fuelBurn * 0.02; 
                         if (rocketBody.mass < minMass) rocketBody.mass = minMass; 
-                        // 重心ズレによる横転を防ぐため updateMassProperties() は使わず手動更新
                         rocketBody.invMass = 1 / rocketBody.mass;
                     }
                     currentThrust = rocketStats.maxThrust * throttle;
                     
                     let gimbalX = 0; let gimbalZ = 0;
                     if (hasManual) {
-                        gimbalX = -state.joyX * 8;
-                        gimbalZ = state.joyY * 8;
+                        gimbalX = -state.joyX;
+                        gimbalZ = state.joyY;
                     } else if (targetDir && sasMode !== 'OFF') {
-                        const localTarget = rocketBody.quaternion.inverse().vmult(targetDir);
-                        gimbalX = localTarget.x * 8;
-                        gimbalZ = localTarget.z * 8;
+                        // SASの目標ベクトルを安全に計算
+                        const localTarget = new CANNON.Vec3();
+                        rocketBody.quaternion.inverse().vmult(targetDir, localTarget);
+                        gimbalX = localTarget.x * 2.0;
+                        gimbalZ = localTarget.z * 2.0;
                     }
-                    gimbalX = Math.max(-20, Math.min(20, gimbalX));
-                    gimbalZ = Math.max(-20, Math.min(20, gimbalZ));
                     
-                    // FIX C: 姿勢を安定させるため、推力をロケットの重心 (0,0,0) から真っ直ぐかける
+                    // 入力値を -1.0 ～ 1.0 の安全な範囲に制限（暴走防止）
+                    gimbalX = Math.max(-1, Math.min(1, gimbalX));
+                    gimbalZ = Math.max(-1, Math.min(1, gimbalZ));
+                    
+                    // 推力はロケットの重心 (0,0,0) から真っ直ぐかける
                     applyThrustToRocket(rocketBody, currentThrust, new CANNON.Vec3(0, 0, 0));
                     
-                    // 姿勢制御（ジンバル）用の回転トルクを別でかける
-                    const tAmt = currentThrust * 0.05; 
-                    const localT = new CANNON.Vec3(gimbalZ * tAmt, 0, -gimbalX * tAmt);
-                    rocketBody.applyTorque(rocketBody.quaternion.vmult(localT));
+                    // 【重要】回転力（トルク）は推力ではなく「質量」をベースにし、物理崩壊を防ぐ
+                    const torqueStrength = rocketBody.mass * 2.5; // 安定した回転力
+                    const localTorque = new CANNON.Vec3(gimbalZ * torqueStrength, 0, -gimbalX * torqueStrength);
+                    rocketBody.applyTorque(rocketBody.quaternion.vmult(localTorque));
+
+                    // 空力ブレーキ（回転の暴走を防ぐ摩擦）を少し強める
+                    rocketBody.angularDamping = 0.8;
+                    // --- ここまで ---
+
 
 
 
